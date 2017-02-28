@@ -1,0 +1,5 @@
+1
+words
+llista_10.cfg
+5
+
