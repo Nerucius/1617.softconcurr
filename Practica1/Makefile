@@ -7,18 +7,18 @@ FILES_C = main.c red-black-tree.c linked-list.c create-tree.c tree-utils.c
 TARGET = main
 
 # Compilation options
-CFLAGS = -Wall -Werror -g
+CFLAGS = -Wall -Werror -pg -g
 
-# Linker options 
-LFLAGS = -lm 
+# Linker options
+LFLAGS = -lm
 
 # There is no need to change the instructions below this
 # line. Change if you really know what you are doing.
 
 $(TARGET): $(FILES_O) Makefile
-	gcc $(CFLAGS) $(FILES_C) -o $(TARGET) $(LFLAGS) 
+	gcc $(CFLAGS) $(FILES_C) -o $(TARGET) $(LFLAGS)
 
-all: $(TARGET) 
+all: $(TARGET)
 
 clean:
-	/bin/rm $(TARGET) 
+	/bin/rm $(TARGET)
