@@ -7,7 +7,15 @@ FILES_C = main.c red-black-tree.c linked-list.c create-tree.c tree-utils.c
 TARGET = main
 
 # Compilation options
-CFLAGS = -Wall -Werror -pg -g
+# PERF & DEBUG
+# CFLAGS = -Wall -Werror -pg -g
+# DEBUG
+CFLAGS = -Wall -Werror -g -fopenmp
+# Optimize lvl 1
+#CFLAGS = -Wall -Werror -O
+# Optimize lvl 3
+#CFLAGS = -Wall -Werror -O3
+
 
 # Linker options
 LFLAGS = -lm

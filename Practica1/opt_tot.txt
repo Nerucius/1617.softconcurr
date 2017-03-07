@@ -1,0 +1,5 @@
+1
+words
+llista_tot.cfg
+5
+
