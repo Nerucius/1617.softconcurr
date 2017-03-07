@@ -366,56 +366,67 @@ void updateTree(List *hastable, RBTree *tree, int idFile, int numFiles)
 
 void processTextFiles(char *filename, RBTree *tree)
 {
-  FILE *fp;
+    FILE *fp;
 
-  int i, nfiles;
-  char line[MAXCHAR];
+    int i, nfiles;
+    char line[MAXCHAR];
 
-  List *hashTable;
+    List *hashTable;
 
-  fp = fopen(filename, "r");
-  if (!fp) {
-    printf("No s'ha pogut obrir el fitxer '%s'\n", filename);
-    exit(1);
-  }
+    fp = fopen(filename, "r");
+    if (!fp) {
+	printf("No s'ha pogut obrir el fitxer '%s'\n", filename);
+	exit(1);
+    }
 
-  /* Get number of files to process */
-
-  fgets(line, MAXCHAR, fp);
-  nfiles = atoi(line);
-
-  if (nfiles < 1) {
-    printf("El nombre d'arxius al fitxer '%s' no es correcte.\n", filename);
-    fclose(fp);
-    exit(1);
-  }
-
-  /* Initialize remaining fiels of the tree */
-
-  initializeFieldsTree(tree, nfiles);
-
-  /* Process files */
-
-  for(i = 0; i < nfiles; i++) {
-    /* Read line */
+    /* Get number of files to process */
 
     fgets(line, MAXCHAR, fp);
-    line[strlen(line)-1]=0;
+    nfiles = atoi(line);
 
-    /* Process file */
+    if (nfiles < 1) {
+	printf("El nombre d'arxius al fitxer '%s' no es correcte.\n", filename);
+	fclose(fp);
+	exit(1);
+    }
 
-    hashTable = processPlainFile(line);
+    char** flist = malloc(sizeof(char*) * nfiles);
+    for(i = 0; i < nfiles; i++) {
+	flist[i] = malloc(sizeof(char) * MAXCHAR);
+	fgets(flist[i], MAXCHAR, fp);
+	flist[i][strlen(flist[i])-1] = 0;
 
-    /* Copy to tree */
+    }
 
-    updateTree(hashTable, tree, i, nfiles);
+    /* Initialize remaining fiels of the tree */
 
-    /* Delete hashTable */
+    initializeFieldsTree(tree, nfiles);
 
-    deleteHashTable(hashTable);
-  }
+    /* Process files */
 
-  fclose(fp);
+#pragma omp parallel for shared(tree) private(hashTable) schedule(dynamic)
+    for(i = 0; i < nfiles; i++) {
+	char* fname = flist[i];
+
+	/* Process file */
+
+	hashTable = processPlainFile(fname);
+
+	/* Copy to tree */
+#pragma omp critical
+	updateTree(hashTable, tree, i, nfiles);
+
+	/* Delete hashTable */
+
+	deleteHashTable(hashTable);
+    }
+
+    for(i = 0; i < nfiles; i++) 
+      free(flist[i]);
+    
+    free(flist);
+
+    fclose(fp);
 }
 
 /**
