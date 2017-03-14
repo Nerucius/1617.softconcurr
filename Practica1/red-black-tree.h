@@ -1,6 +1,8 @@
 #ifndef REDBLACKTREE_H
 #define REDBLACKTREE_H
 
+#include <omp.h>
+
 /**
  *
  * Red-black tree header 
@@ -25,7 +27,8 @@ typedef struct RBData_
 {
   // The variable used to index the tree has to be called "key".
   // The type may be any you want (float, char *, etc)
-  TYPE_RBTREE_KEY key;     
+  TYPE_RBTREE_KEY key;  
+  omp_lock_t lock;   
 
   // This is the additional information that will be stored
   // within the structure.

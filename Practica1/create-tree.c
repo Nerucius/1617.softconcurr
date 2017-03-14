@@ -11,8 +11,9 @@
 #include <sys/stat.h>
 
 #include "create-tree.h"
+#include <omp.h>
 
-#define HASHSIZE 100
+#define HASHSIZE 2048
 
 /**
  *  We need to include here "sentinel" since we use NIL in this file
@@ -77,7 +78,8 @@ RBTree *processDictionary(char *filename)
       treeData->key = paraula;
       treeData->numFiles = 0;
       treeData->numTimes = NULL;
-
+      omp_init_lock(&treeData->lock);
+      
       insertNode(tree, treeData);
     }
   }
@@ -335,24 +337,28 @@ void updateTree(List *hastable, RBTree *tree, int idFile, int numFiles)
 
     for(j = 0; j < numItems; j++) {
 
-      /* Search if the key is in the tree */
-      data = findNode(tree, current->data->primary_key);
+		/* Search if the key is in the tree */
+		data = findNode(tree, current->data->primary_key);
 
-      /* We transfer data only if word is in tree */
-      if (data != NULL) {
+		/* We transfer data only if word is in tree */
+		if (data != NULL) {
 
-	if (data->numTimes == NULL) {
-	  data->numTimes = malloc(sizeof(int) * numFiles);
+			if (data->numTimes == NULL) {
+			data->numTimes = malloc(sizeof(int) * numFiles);
 
-	  for(i = 0; i < numFiles; i++)
-	    data->numTimes[i] = 0;
-	}
+			for(i = 0; i < numFiles; i++)
+			data->numTimes[i] = 0;
+			}
 
-	data->numFiles++;
-	data->numTimes[idFile] = current->data->numTimes;
-      } 
+			omp_set_lock(&data->lock);
+			
+			data->numFiles++;
+			data->numTimes[idFile] = current->data->numTimes;
+			
+			omp_unset_lock(&data->lock);
+		} 
 
-      current = current->next;
+		current = current->next;
     }
   }
 }
@@ -413,7 +419,6 @@ void processTextFiles(char *filename, RBTree *tree)
 	hashTable = processPlainFile(fname);
 
 	/* Copy to tree */
-#pragma omp critical
 	updateTree(hashTable, tree, i, nfiles);
 
 	/* Delete hashTable */
