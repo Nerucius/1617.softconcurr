@@ -3,3 +3,6 @@
 *.a
 *.bak
 *.log
+main_cpu
+main_gpu
+out*.bmp
