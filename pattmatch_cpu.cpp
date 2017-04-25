@@ -17,16 +17,20 @@ CImg<float> pattern_matching(CImg<unsigned char> &img, CImg<unsigned char> &pat)
 
     for(int i = 0; i < img.height()-PADDING; i++){
         for(int j = 0; j < img.width()-PADDING; j++){
-            float sum = 0.0;
+            
+	    // Pattern Match
+	    float sum = 0.0;
             for(int k = 0; k < pat.height(); k++){
                 for(int l = 0; l < pat.width(); l++){
-
                     float value = (float) img(j+l,i+k) - (float) pat(l,k);
                     sum += value * value;
                 }
             }
             output(j,i) = sum / (float) (MIDAP*MIDAP);
-        }
+	    // END Pattern Match
+	  
+	    
+	}
     }
 
     gettimeofday(&end, NULL);	

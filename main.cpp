@@ -67,7 +67,7 @@ int main(int argc, char** argv )
     CImg<float> out = pattern_matching(gray_border, pattern);
     CImg<unsigned char> norm_out= out.get_normalize(0, 255);
 
-    out.save(argv[3]);
+    norm_out.save(argv[3]);
 
     return 0;
 }
