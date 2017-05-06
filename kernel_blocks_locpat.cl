@@ -1,15 +1,14 @@
 #include "common.h"
+#include "kernel_core.c"
 
-#define GET(img, cols, i, j)    (( img[i*cols + j] ))
-#define SET(img, cols, i, j, v) ({ img[i*cols + j] = v; })
-
-/** Clamp a float value between upper and lower bounds */
-inline float fclamp(float val, float lower, float upper) {
-	return max(min(upper, val), lower);
-}
+/**
+ * 32x32 IMAGE BLOCKS KERNEL: USING 32x4 THREAD PER BLOCK.
+ * THIS VERSION COPIES THE PATTERN TO THE WORK-GROUP'S LOCAL
+ * MEMORY.
+ */
 
 /** Match the pattern on a single pixel coordinate */
-float match_patt(
+float local_match_patt(
 		__global unsigned char *img,
 		__local unsigned char *pat,
 		int cols,
@@ -35,20 +34,22 @@ float match_patt(
 }
 
 
-
-// img: imatge amb una vora de 15 pixels per la dreta i per sota
-// pat: patro de 16 x 16 pixels
-// rows: files de img (incloent la vora de 15 pixels)
-// cols: columnes de img (incloent la vora de 15 pixels)
-// out: image resultant sense cap vora
-
-
+/**
+ * Kernel Main Function
+ *
+ * @param img imatge amb una vora de 15 pixels per la dreta i per sot
+ * @param pat patro de 16 x 16 pixels
+ * @param rows files de img (incloent la vora de 15 pixel
+ * @param cols columnes de img (incloent la vora de 15 pixels)
+ * @param out image resultant sense cap vora
+ */
 __kernel void pattern_matching(
 		__global unsigned char *img,
 		__global unsigned char *pat,
 		int rows,
 		int cols,
 		__global float *out) {
+
 	__local unsigned char LOC_PAT[16 * 16];
 
 	int i, j;
@@ -67,7 +68,7 @@ __kernel void pattern_matching(
 
 	for (int row = 0; row < 8; row++) {
 		int r = i + row;
-		val = match_patt(img, LOC_PAT, cols, r, j);
+		val = local_match_patt(img, LOC_PAT, cols, r, j);
 		SET(out, out_cols, r, j, val);
 	}
 

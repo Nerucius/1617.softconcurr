@@ -1,22 +1,16 @@
 #include "common.h"
-
-#define GET(img, cols, i, j)    (( img[i*cols + j] ))
-#define SET(img, cols, i, j, v) ({ img[i*cols + j] = v; })
+#include "kernel_core.c"
 
 /**
- * PER PIXEL KERNEL: THIS KERNEL WORKS WITH A GLOBAL WORK SIZE
- * OF IMAGE_WIDTH x IMAGE_HEIGHT AND USES ONE THREAD PER PIXEL.
+ * 32x32 IMAGE BLOCKS KERNEL: USING 32x4 THREAD PER BLOCK.
+ * THIS VERSION COPIES THE PATTERN TO THE WORK-GROUP'S LOCAL
+ * MEMORY.
  */
 
-/** Clamp a float value between upper and lower bounds */
-float fclamp(float val, float upper, float lower) {
-	return max(min(upper, val), lower);
-}
-
 /** Match the pattern on a single pixel coordinate */
-float match_patt(
-		__global unsigned char *img,
-		__global unsigned char *pat,
+float local_match_patt(
+		__local unsigned char *img,
+		__local unsigned char *pat,
 		int cols,
 		int i,
 		int j) {
@@ -52,23 +46,47 @@ float match_patt(
 __kernel void pattern_matching(
 		__global unsigned char *img,
 		__global unsigned char *pat,
-		int rows,
-		int cols,
+		const int rows,
+		const int cols,
 		__global float *out) {
-	int i, j;
-	char val;
 
-	i = get_global_id(1);
-	j = get_global_id(0);
+
+	__local unsigned char LOC_PAT[16 * 16];
+	__local unsigned char LOC_IMG[(32 + 16) * (32 + 16)];
+
+
+	int row = get_global_id(1) * 8;
+	int col = get_global_id(0);
 
 	int out_rows = rows - PADDING;
 	int out_cols = cols - PADDING;
 
-	// Match the pattern
-	val = match_patt(img, pat, cols, i, j);
-	// Write value to out image
-	SET(out, out_cols, i, j, val);
+	for (int cp = 0; cp < 16 * 16; cp++)
+		LOC_PAT[cp] = pat[cp];
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// local row and col
+	int lr = get_local_id(0);
+	int lc = get_local_id(1);
+	int r_off = lr * 32;
+	int c_off = lc * 32;
+
+	// Copy this work groups's image work area to local memory
+	// cc, cr: CopyRow and CopyCol
+	for (int cr = row; cr < row + 48; cr++)
+		for (int cc = col; cc < col + 48; cc++) {
+			int ir = cr - row;
+			int ic = cc - col;
+			unsigned char val = GET(img, cols, cr, cc);
+			SET(LOC_IMG, 48, ir, ic, val);
+		}
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	float val;
+	for (int r = 0; r < 8; r++) {
+		val = local_match_patt(LOC_IMG, LOC_PAT, 32, r, col);
+		int out_row = row + r;
+		SET(out, out_cols, out_row, col, val);
+	}
+
 }
-
-
-

@@ -278,12 +278,19 @@ CImg<float> pattern_matching(CImg<unsigned char> &img, CImg<unsigned char> &pat)
 	// sense la vora tingui una mida que sigui multiple del localWorkSize
 
 	// width x height parameters
-	size_t globalWorkSize[] = {(size_t) width - PADDING, (size_t) (height - PADDING)};
-	size_t localWorkSize[] = {1, 1};
+//	size_t globalWorkSize[] = {(size_t) width - PADDING, (size_t) ((height - PADDING))};
+//	size_t localWorkSize[] = {32,32};
+//	cl_uint work_dimension = 2;
+
+	// per-row parameters
+//	size_t globalWorkSize[] = {(size_t) ((height - PADDING))};
+//	size_t localWorkSize[] = {32};
+//	cl_uint work_dimension = 1;
 
 	// 32x32 pixel blocks with 32x4 threads per block parameters
-	//size_t globalWorkSize[] = {(size_t) width - PADDING, (size_t) ((height - PADDING)/8)};
-	//size_t localWorkSize[] = {32, 4};
+	size_t globalWorkSize[] = {(size_t) width - PADDING, (size_t) ((height - PADDING)/8)};
+	size_t localWorkSize[] = {32, 4};
+	cl_uint work_dimension = 2;
 
 
 	//-----------------------------------------------------
@@ -297,7 +304,7 @@ CImg<float> pattern_matching(CImg<unsigned char> &img, CImg<unsigned char> &pat)
 	status = clEnqueueNDRangeKernel(
 			cmdQueue,
 			kernel,
-			2,
+			work_dimension, // 1 or 2 depending on kernel used
 			NULL,
 			globalWorkSize,
 			localWorkSize,
