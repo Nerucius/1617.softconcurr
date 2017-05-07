@@ -1,8 +1,6 @@
 #include "common.h"
 #include "kernel_core.c"
 
-#define FACTOR 4096
-
 /**
  * 32x32 IMAGE BLOCKS KERNEL: USING 32x4 THREAD PER BLOCK.
  * THIS VERSION COPIES THE PATTERN TO THE WORK-GROUP'S LOCAL
@@ -31,7 +29,7 @@ float local_match_patt(
 	}
 
 	//sum = sum / (float)(16*16);
-	sum = fclamp(sum / FACTOR, 0, 255);
+	sum = fclamp(sum / (16 * 16 * 16), 0, 255);
 	return sum;
 }
 
@@ -56,7 +54,7 @@ __kernel void pattern_matching(
 	__local unsigned char LOC_PAT[16 * 16];
 	__local unsigned char LOC_IMG[(32 + 16) * (32 + 16)];
 
-	// Kernel row and col
+
 	int row = get_global_id(1) * 8;
 	int col = get_global_id(0);
 
@@ -70,35 +68,24 @@ __kernel void pattern_matching(
 	// local row and col
 	int lr = get_local_id(0);
 	int lc = get_local_id(1);
+	int r_off = lr * 32;
+	int c_off = lc * 32;
 
 	// Copy this work groups's image work area to local memory
 	// cc, cr: CopyRow and CopyCol
-	for (int cp = 0; cp < 48*48; cp++){
-		int imgr = row + (cp % 48);
-		int imgc = col + (cp / 48);
-		float val = GET(img, cols, imgr, imgc);
-
-		LOC_IMG[cp] = col;
-	}
-
-//	for (int cr = row; cr < row + 48; cr++)
-//		for (int cc = col; cc < col + 48; cc++) {
-//			int ir = cr - row;
-//			int ic = cc - col;
-//			unsigned char val = GET(img, cols, cr, cc);
-//			SET(LOC_IMG, 48, ir, ic, val);
-//
-//		}
+	for (int cr = row; cr < row + 48; cr++)
+		for (int cc = col; cc < col + 48; cc++) {
+			int ir = cr - row;
+			int ic = cc - col;
+			unsigned char val = GET(img, cols, cr, cc);
+			SET(LOC_IMG, 48, ir, ic, val);
+		}
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	float val;
 	for (int r = 0; r < 8; r++) {
-		//val = local_match_patt(LOC_IMG, LOC_PAT, 32, r, col);
+		val = local_match_patt(LOC_IMG, LOC_PAT, 32, r, col);
 		int out_row = row + r;
-		int mrow = row % 32 + r;
-		int mcol = col % 32;
-		val = GET(LOC_IMG, 48, mrow, mcol);
-
 		SET(out, out_cols, out_row, col, val);
 	}
 
