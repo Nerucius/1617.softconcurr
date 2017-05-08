@@ -2,11 +2,14 @@
 #include "kernel_core.c"
 
 #define FACTOR 4096
+#define LOC_ROWS 32
+#define LOC_COLS 32
+#define LOC_SIZE (LOC_ROWS * LOC_COLS)
 
 /**
  * 32x32 IMAGE BLOCKS KERNEL: USING 32x4 THREAD PER BLOCK.
- * THIS VERSION COPIES THE PATTERN TO THE WORK-GROUP'S LOCAL
- * MEMORY.
+ * THIS VERSION COPIES THE PATTERN AND A FRAGMENT OF THE IMAGE
+ * TO THE WORK-GROUP'S LOCAL MEMORY.
  */
 
 /** Match the pattern on a single pixel coordinate */
@@ -54,50 +57,44 @@ __kernel void pattern_matching(
 
 
 	__local unsigned char LOC_PAT[16 * 16];
-	__local unsigned char LOC_IMG[(32 + 16) * (32 + 16)];
+	__local unsigned char LOC_IMG[LOC_SIZE];
 
 	// Kernel row and col
-	int row = get_global_id(1) * 8;
-	int col = get_global_id(0);
-
-	int out_rows = rows - PADDING;
-	int out_cols = cols - PADDING;
+	const int row = get_global_id(1) * 8;
+	const int col = get_global_id(0);
+	const int out_rows = rows - PADDING;
+	const int out_cols = cols - PADDING;
 
 	for (int cp = 0; cp < 16 * 16; cp++)
 		LOC_PAT[cp] = pat[cp];
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	// local row and col
-	int lr = get_local_id(0);
-	int lc = get_local_id(1);
-
 	// Copy this work groups's image work area to local memory
-	// cc, cr: CopyRow and CopyCol
-	for (int cp = 0; cp < 48*48; cp++){
-		int imgr = row + (cp % 48);
-		int imgc = col + (cp / 48);
-		float val = GET(img, cols, imgr, imgc);
+	int lr, lc = col % LOC_COLS;
+	unsigned char val;
+	for (int cr = row; cr < (row + 8); cr++){
+			lr = cr - row;
+			val = GET(img, cols, cr, col);
+			SET(LOC_IMG, LOC_COLS, lr, lc, val);
 
-		LOC_IMG[cp] = col;
+//			val = GET(LOC_IMG, LOC_COLS, lr, lc);
+//			SET(out, out_cols, cr, col, val);
 	}
-
-//	for (int cr = row; cr < row + 48; cr++)
-//		for (int cc = col; cc < col + 48; cc++) {
-//			int ir = cr - row;
-//			int ic = cc - col;
-//			unsigned char val = GET(img, cols, cr, cc);
-//			SET(LOC_IMG, 48, ir, ic, val);
-//
-//		}
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	float val;
-	for (int r = 0; r < 8; r++) {
+//	for (int cr = row; cr < (row + LOC_ROWS); cr+=8){
+//		lr = cr - row;
+//		val = GET(LOC_IMG, LOC_COLS, lr, lc);
+//		SET(out, out_cols, cr, col, 255);
+//	}
+
+	int out_row;
+	for (int r = 0; r < 32; r++) {
+		out_row = row + r;
+
 		//val = local_match_patt(LOC_IMG, LOC_PAT, 32, r, col);
-		int out_row = row + r;
-		int mrow = row % 32 + r;
-		int mcol = col % 32;
-		val = GET(LOC_IMG, 48, mrow, mcol);
+
+		val = GET(LOC_IMG, LOC_COLS, 1, 1);
 
 		SET(out, out_cols, out_row, col, val);
 	}
