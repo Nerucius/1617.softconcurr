@@ -2,8 +2,8 @@
 #include "kernel_core.c"
 
 #define FACTOR 4096
-#define LOC_ROWS 64
-#define LOC_COLS 64
+#define LOC_ROWS 32
+#define LOC_COLS 32
 #define LOC_SIZE (LOC_ROWS * LOC_COLS)
 
 /**
@@ -55,15 +55,21 @@ __kernel void pattern_matching(
 		const int cols,
 		__global float *out) {
 
+
 	__local unsigned char LOC_PAT[16 * 16];	
-	__local  unsigned char LOC_IMG[LOC_SIZE];
-		
-	unsigned char val;
-	unsigned short cc, cr;
+	__local unsigned char LOC_IMG[LOC_SIZE];
 	
+	
+	unsigned char val;
+	
+	// Copy Pattern 
+	for (int cp = 0; cp < 16 * 16; cp++)
+	    LOC_PAT[cp] = pat[cp];
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	// Kernel row and col
-	int row = get_global_id(1) * 8;	
-	int col = get_global_id(0);
+	const int row = get_global_id(1) * 8;	
+	const int col = get_global_id(0);
 	const int out_rows = rows - PADDING;
 	const int out_cols = cols - PADDING;
 	
@@ -74,35 +80,17 @@ __kernel void pattern_matching(
 	int lr = get_local_id(1);
 	int lc = get_local_id(0);
 	
-	// Copy Pattern
-	if(lc < 16)
-		for (cr = 0; cr < 16; cr++){
-			val = GET(pat, 16, cr, lc);
-			SET(LOC_PAT, 16, cr, lc, val);
-			//LOC_PAT[lc * cr] = pat[lc * cr];
-		}
-	barrier(CLK_LOCAL_MEM_FENCE);
-	
-	
-	int roff;
-	int coff;
-	
-	// Copy the four 32x32 tiles composing our 64x64 local image copy
-	for(roff = 0; roff <= 32; roff+=32){
-		for(coff = 0; coff <= 32; coff+=32){
-			row += roff;
-			col += coff;
-			lc += coff;
-			for(int cr = row; cr < row +8; cr++){
-				val = GET(img, cols, cr, col);
-				lr = get_local_id(1)*8 + (cr - row) + roff;
-				SET(LOC_IMG, LOC_COLS, lr, lc, val);
-			}
-			row -= roff;
-			col -= coff;
-			lc -= coff;
-		}
-	}	
+	for(int cr = row; cr < row +8; cr++){
+		val = GET(img, cols, cr, col);
+		
+		lr = get_local_id(1)*8 + (cr - row);
+		SET(LOC_IMG, LOC_COLS, lr, lc, val);
+		
+		
+		val = GET(LOC_IMG, LOC_COLS, lr, lc);
+		SET(out, out_cols, cr, col, row );
+		//*/
+	}
 	barrier(CLK_LOCAL_MEM_FENCE);
 	
 
@@ -110,8 +98,35 @@ __kernel void pattern_matching(
 		lr = get_local_id(1)*8 + (cr - row);
 		val = GET(LOC_IMG, LOC_COLS, lr, lc);
 		
-		val = local_match_patt(LOC_IMG, LOC_PAT, LOC_COLS, lr, lc);
+
 		SET(out, out_cols, cr, col, val );
 	}
 	
+	/*
+
+	// Copy this work groups's image work area to local memory
+	
+	for (int cr = row; cr < (row + 8); cr++){
+	    lr = cr - row;
+	    //val = GET(img, cols, cr, col);
+	    //SET(LOC_IMG, LOC_COLS, lr, lc, val);
+	    
+	    val = local_match_patt(LOC_IMG, LOC_PAT, 32, r, col);
+	    SET(out, out_cols, cr, col, val);
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	
+
+	int out_row;
+	for (int r = 0; r < 8; r++) {
+		out_row = row + r;
+
+		//val = local_match_patt(LOC_IMG, LOC_PAT, 32, r, col);
+
+		val = GET(LOC_IMG, LOC_COLS, lc, r);
+
+		SET(out, out_cols, out_row, col, val);
+	}*/
+
 }
