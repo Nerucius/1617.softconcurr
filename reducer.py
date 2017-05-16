@@ -6,6 +6,10 @@ import sys
 current_year = None
 current_origin = None
 current_count = 0
+
+current_delay = 0
+current_delay_count = 0
+
 year = None
 origin = None
 total = 0
@@ -15,12 +19,14 @@ for line in sys.stdin:
 	line = line.strip()
 
 	# parse the input we got from mapper.py
-	key, cancelled = line.split('\t')
+	key, data = line.split('\t')
 	year, origin = key.split(',')
+	delay, cancelled = data.split(',')
 
 	# convert count (currently a string) to int
 	try:
 		cancelled = int(cancelled)
+		delay = float(delay)
 	except ValueError:
 		# count was not a number, so silently
 		# ignore/discard this line
@@ -30,17 +36,22 @@ for line in sys.stdin:
 	# by key (here: word) before it is passed to the reducer
 	if current_year == year and current_origin == origin:
 		current_count += cancelled
+		current_delay += delay
+		current_delay_count += 1
 	else:
 		if current_year and current_origin:
 			# write result to STDOUT
-			print '%s\t%s\t%s'% (current_year, current_origin, current_count)
+			avg_delay = current_delay / curent_delay_count
+			print '%s\t%s\t%.2f,%s'% (current_year, current_origin, avg_delay, current_count)
 
+		current_delay = delay
+		curent_delay_count = 1
 		current_count = cancelled
 		current_year = year
 		current_origin = origin
 
 # do not forget to output the last word if needed!
 if current_year == year and current_origin == origin:
-	print '%s\t%s\t%s'% (current_year, current_origin, current_count)
-
+    avg_delay = current_delay / curent_delay_count
+    print '%s\t%s\t%.2f,%s'% (current_year, current_origin, avg_delay, current_count)
 	
