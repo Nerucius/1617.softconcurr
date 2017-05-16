@@ -1,0 +1,12 @@
+*.o
+*.out
+*.a
+*.bak
+*.log
+main_cpu
+main_gpu
+out*.bmp
+
+.idea/*
+CMakeLists.txt
+cmake-build-debug/*
