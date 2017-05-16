@@ -10,3 +10,5 @@ out*.bmp
 .idea/*
 CMakeLists.txt
 cmake-build-debug/*
+2007.csv.bz2
+2008.csv.bz2
