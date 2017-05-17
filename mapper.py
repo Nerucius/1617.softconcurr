@@ -20,10 +20,12 @@ for line in sys.stdin:
       origin = words[16].strip()
       cancelled = bool(int(words[21].strip()))
       delay = max(int(words[15].strip()), 0)
+    except ValueError:
+      pass
     except Exception:
       # If a flight is cancelled, getting the delay will throw an exception
       # when parsing "NA" as an int: no-problemo, carry on
-      pass
+      continue
     
     # Construct Cancelled and Delays dictionary
     
