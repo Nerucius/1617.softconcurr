@@ -18,19 +18,15 @@ for line in sys.stdin:
       origin = words[16].strip()
       cancelled = bool(int(words[21].strip()))
       delay = int(words[15].strip())
-    except TypeError:
-      pass
     except Exception:
-      # If a flight is cancelled, getting the delay will throw an exception
-      # when parsing "NA" as an int: no-problemo, carry on
       continue
 
-    if cancelled:
-        if origin in cancels:
-            cancels[origin] +=1
-        else:
-            cancels[origin] = 1
-        continue;
+    # if cancelled:
+    #     if origin in cancels:
+    #         cancels[origin] +=1
+    #     else:
+    #         cancels[origin] = 1
+    #     continue;
 
     if year in delays:
         # For normal delayed flights, check for existance and update counts
@@ -44,11 +40,9 @@ for line in sys.stdin:
         delays[year][origin] = {'delay': delay, 'count': 1}
 
 
-
 # Output format : year,origin   avg_delay
 for year in sorted(delays.keys()):
     for origin, item in delays[year].iteritems():
-        avg_delay = float(item['delay']) / item['count']
         print '%s,%s\t%d,%d' % (year, origin, item['delay'], item['count'])
 
 
