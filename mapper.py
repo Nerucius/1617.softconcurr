@@ -4,66 +4,55 @@ import sys
 
 # input comes from STDIN (standard input)
 delays = {}
+cancels = {}
 
 for line in sys.stdin:
     # remove leading and trailing whitespace
     line = line.strip()
-    if line.startswith("#"):
-        continue
-    
     # split the line into words
     words = line.split(',')
-    
+
     # Skip over invalid data
     try:
-      year = int(words[0].strip())
+      year = words[0].strip()
       origin = words[16].strip()
       cancelled = bool(int(words[21].strip()))
-      delay = max(int(words[15].strip()), 0)
-    except ValueError:
+      delay = int(words[15].strip())
+    except TypeError:
       pass
     except Exception:
       # If a flight is cancelled, getting the delay will throw an exception
       # when parsing "NA" as an int: no-problemo, carry on
       continue
-    
-    # Construct Cancelled and Delays dictionary
-    
+
     if cancelled:
-      # For cancelled flights, check if it's registered and increment count
-      if year in delays:
-	if origin in delays[year]:
-	  delays[year][origin]['cancelled'] += 1
-	else:
-	  delays[year][origin] = {'delay': 0, 'count': 0, 'cancelled': 1}
-      else:
-	delays[year] = {}
-	delays[year][origin] = {'delay': 0, 'count': 0, 'cancelled': 1}
+        if origin in cancels:
+            cancels[origin] +=1
+        else:
+            cancels[origin] = 1
+        continue;
 
     if year in delays:
-      # For normal delayed flights, check for existance and update counts
-      if origin in delays[year]:
-	delays[year][origin]['delay'] += delay
-	delays[year][origin]['count'] += 1
-      else:
-	delays[year][origin] = {'delay': delay, 'count': 1, 'cancelled': 0}
-      
+        # For normal delayed flights, check for existance and update counts
+        if origin in delays[year]:
+            delays[year][origin]['delay'] += delay
+            delays[year][origin]['count'] += 1
+        else:
+            delays[year][origin] = {'delay': delay, 'count': 1}
     else:
-      delays[year] = {}
-      delays[year][origin] = {'delay': delay, 'count': 1, 'cancelled': 0}
+        delays[year] = {}
+        delays[year][origin] = {'delay': delay, 'count': 1}
 
-    
 
-# Output format : < year,origin,avg_delay >
 
-for year in delays.keys():
-  for origin, item in delays[year].iteritems():
-    avg_delay = float(item['delay']) / item['count']
-    cancelled = item['cancelled']
-    print '%d,%s\t%.2f,%d' % (year, origin, avg_delay,cancelled)
-    
-    
-    
+# Output format : year,origin   avg_delay
+for year in sorted(delays.keys()):
+    for origin, item in delays[year].iteritems():
+        avg_delay = float(item['delay']) / item['count']
+        print '%s,%s\t%d,%d' % (year, origin, item['delay'], item['count'])
+
+
+
 """
   FIELDS:
   0 Year
